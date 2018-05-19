@@ -7,6 +7,9 @@
 #define assertIndex(x) assert(0 <= x < 9)
 #define assertValue(x) assert(1 <= x < 10)
 
+#define likely(x)       __builtin_expect((x),1)
+#define unlikely(x)     __builtin_expect((x),0)
+
 using namespace std;
 
 enum IndexKind {
@@ -17,24 +20,43 @@ enum IndexKind {
 
 struct Sudoku;
 
+inline constexpr int divideBy3(int x) {
+    return x / 3;
+}
+
+// slower than integer division
+inline constexpr int divideBy3_1(int x) {
+    int result = 0;
+    if (x >= 3) {
+        result++;
+    }
+    if (x >= 6) {
+        result++;
+    }
+    return result;
+}
+
+inline constexpr int divideBy3_2(int x) {
+    // see http://homepage.divms.uiowa.edu/~jones/bcd/divide.html
+    return (x * 0xAAAB) >> 17;
+}
+
+inline constexpr int indexBlock(int row, int column) {
+    return divideBy3(column) + 3 * divideBy3(row);
+}
+
 struct Move {
-    Move(int row, int column, int digit)
-        : m_row(row)
-        , m_column(column)
-        , m_digitIndex(digit - 1)
+    Move(int row, int column, int digit, int indexBlock)
+        : m_digitIndex(digit - 1)
         , m_usedDigitsIndexRow(indexUsedDigits(m_digitIndex, ROW, row))
         , m_usedDigitsIndexColumn(indexUsedDigits(m_digitIndex, COLUMN, column))
-        , m_usedDigitsIndexBlock(indexUsedDigits(m_digitIndex, BLOCK, indexBlock(row, column))) {
+        , m_usedDigitsIndexBlock(indexUsedDigits(m_digitIndex, BLOCK, indexBlock)) {
         assertIndex(row);
         assertIndex(column);
         assertValue(digit);
     }
 
-    int m_row, m_column, m_digitIndex, m_usedDigitsIndexRow, m_usedDigitsIndexColumn, m_usedDigitsIndexBlock;
-
-    inline constexpr int indexBlock(int row, int column) const{
-        return (column / 3) + 3 * (row / 3);
-    }
+    int m_digitIndex, m_usedDigitsIndexRow, m_usedDigitsIndexColumn, m_usedDigitsIndexBlock;
 
     inline constexpr int indexUsedDigits(int digitIndex, IndexKind indexKind, int index) {
         return digitIndex + 9 * (indexKind + 3 * index);
@@ -43,25 +65,24 @@ struct Move {
     friend class Sudoku;
 };
 
-ostream& operator<<(ostream & os, const Move & move) {
-    os << "[" << move.m_row << "," << move.m_column << "]=" << (move.m_digitIndex + 1);
-    return os;
-}
-
 // TODO optimize iteration over Moves by incremental index computation
 // TODO in naive iteration, some checks might be done several times?
 
+inline constexpr int indexGrid(int row, int column) {
+    return column + 9 * row;
+}
+
 struct Sudoku {
 
-    void perform(const Move & move) {
-        m_values[indexGrid(move.m_row, move.m_column)] = move.m_digitIndex + 1;
+    void perform(int index, const Move & move) {
+        m_values[index] = move.m_digitIndex + 1;
         m_usedDigits[move.m_usedDigitsIndexRow] = true;
         m_usedDigits[move.m_usedDigitsIndexColumn] = true;
         m_usedDigits[move.m_usedDigitsIndexBlock] = true;
     }
 
-    void unperform(const Move & move) {
-        m_values[indexGrid(move.m_row, move.m_column)] = 0;
+    void unperform(int index, const Move & move) {
+        m_values[index] = 0;
         m_usedDigits[move.m_usedDigitsIndexRow] = false;
         m_usedDigits[move.m_usedDigitsIndexColumn] = false;
         m_usedDigits[move.m_usedDigitsIndexBlock] = false;
@@ -71,8 +92,8 @@ struct Sudoku {
         return m_values[indexGrid(row, column)];
     }
 
-    bool isEmpty(int row, int column) const {
-        return m_values[indexGrid(row, column)] == 0;
+    bool isEmpty(int index) const {
+        return m_values[index] == 0;
     }
 
     bool isValid(const Move & move) const {
@@ -92,14 +113,13 @@ private:
     // Indexed via indexUsedDigits() + digitIndex
     bitset<3 * 9 * 9> m_usedDigits;
 
-    inline constexpr int indexGrid(int row, int column) const {
-        return column + 9 * row;
-    }
-
 };
 
 // TODO optimize by also incrementing block
-inline bool increment(int & row, int & column) {
+inline bool increment(int & row, int & column, int & index) {
+    // TODO just increment index, then divide by 9 (if needed)
+    // TODO "next empty bit" operation?
+    index++;
     column++;
     if (column >= 9) {
         column = 0;
@@ -121,27 +141,32 @@ void printSudoku(const Sudoku & sudoku) {
 }
 
 // returns true if a solution has been found
-bool solve(Sudoku & sudoku, int row, int column) {
-    while (!sudoku.isEmpty(row, column) && increment(row, column)) {}
+bool solve(Sudoku & sudoku, int row, int column, int index) {
+    while (!sudoku.isEmpty(index) && increment(row, column, index)) {}
     if (row == 9) { // if increment failed
         return true;
     }
     assert(sudoku.isEmpty(row, column));
+
+    int block = indexBlock(row, column);
     for (int digit = 1; digit <= 9; ++digit) {
-        Move move(row, column, digit);
+        Move move(row, column, digit, block); // TODO incremental computation of Move
         if (sudoku.isValid(move)) {
-            sudoku.perform(move);
+            sudoku.perform(index, move);
             // printSudoku(sudoku);
-            int row2 = row;
-            int column2 = column;
-            increment(row2, column2); // result is implicitely checked in the next line
-            if (row2 == 9) { // TODO this is ugly to have the termination check a second time
+            if (index == 81) { // TODO this is ugly to have the termination check a second time
                 return true;
             }
-            if (solve(sudoku, row2, column2)) {
+
+            int row2 = row;
+            int column2 = column;
+            int index2 = index;
+            // TODO remove this increment, it should already be called in child, if order is correct?
+            increment(row2, column2, index2); // result is implicitely checked in the next line
+            if (solve(sudoku, row2, column2,  index2)) {
                 return true; // propagate first solution
             }
-            sudoku.unperform(move);
+            sudoku.unperform(index, move);
         }
     }
     return false;
@@ -156,13 +181,14 @@ Sudoku readSudoku() {
             if (digit == 0) {
                 continue;
             }
-            Move move(row, column, digit);
+            int block = indexBlock(row, column);
+            Move move(row, column, digit, block);
             if (!sudoku.isValid(move)) {
-                cerr << "invalid move: " << move << endl;
+                cerr << "invalid move: [" << row << ", " << column << "]=" << digit<< endl;
                 printSudoku(sudoku);
                 exit(1);
             }
-            sudoku.perform(move);
+            sudoku.perform(indexGrid(row, column), move);
         }
     }
     return sudoku;
@@ -172,7 +198,7 @@ int main() {
     Sudoku sudoku = readSudoku();
     cout << "input:" << endl;
     printSudoku(sudoku);
-    if (solve(sudoku, 0, 0)) {
+    if (solve(sudoku, 0, 0, 0)) {
         cout << "output:" << endl;
         printSudoku(sudoku);
     } else {
