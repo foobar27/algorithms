@@ -20,7 +20,7 @@ enum IndexKind {
 
 struct Sudoku;
 
-inline constexpr int divideBy3(int x) {
+inline constexpr int divideBy3_0(int x) {
     return x / 3;
 }
 
@@ -39,6 +39,19 @@ inline constexpr int divideBy3_1(int x) {
 inline constexpr int divideBy3_2(int x) {
     // see http://homepage.divms.uiowa.edu/~jones/bcd/divide.html
     return (x * 0xAAAB) >> 17;
+}
+
+inline constexpr int divideBy3(int x) {
+    // see http://homepage.divms.uiowa.edu/~jones/bcd/divide.html
+
+//    Q = ((A >>  2) + A) >> 1; /* Q = A*0.101 */
+//    Q = ((Q >>  4) + Q)     ; /* Q = A*0.1010101 */
+//    Q = ((Q >>  8) + Q) >> 1; /* Q = A*0.0101010101010101 */
+    x = x + 1;
+    int q = ((x >> 2) + x) >> 1;
+    q = ((q >> 4) + q);
+    q = ((q >> 8) + q) >> 1;
+    return q;
 }
 
 inline constexpr int indexBlock(int row, int column) {
@@ -195,6 +208,10 @@ Sudoku readSudoku() {
 }
 
 int main() {
+//    for (int i = 0; i < 9; ++ i) {
+//        cout << divideBy3(i) << endl;
+//    }
+//    return 0;
     Sudoku sudoku = readSudoku();
     cout << "input:" << endl;
     printSudoku(sudoku);
