@@ -48,10 +48,16 @@ inline constexpr int divideBy3(int x) {
 //    Q = ((Q >>  4) + Q)     ; /* Q = A*0.1010101 */
 //    Q = ((Q >>  8) + Q) >> 1; /* Q = A*0.0101010101010101 */
     x = x + 1;
-    int q = ((x >> 2) + x) >> 1;
-    q = ((q >> 4) + q);
-    q = ((q >> 8) + q) >> 1;
-    return q;
+    int t = ((x >> 2) + x) >> 1;
+    t = ((t >> 4) + t);
+    t = ((t >> 8) + t) >> 1;
+    return t;
+}
+
+constexpr int lut[] = {0, 0, 0, 1, 1, 1, 2, 2, 2};
+
+inline constexpr int divideBy3_4(int x) {
+    return lut[x];
 }
 
 inline constexpr int indexBlock(int row, int column) {
@@ -159,7 +165,7 @@ bool solve(Sudoku & sudoku, int row, int column, int index) {
     if (row == 9) { // if increment failed
         return true;
     }
-    assert(sudoku.isEmpty(row, column));
+    assert(sudoku.isEmpty(index));
 
     int block = indexBlock(row, column);
     for (int digit = 1; digit <= 9; ++digit) {
@@ -208,10 +214,10 @@ Sudoku readSudoku() {
 }
 
 int main() {
-//    for (int i = 0; i < 9; ++ i) {
-//        cout << divideBy3(i) << endl;
-//    }
-//    return 0;
+    for (int i = 0; i < 9; ++ i) {
+        cout << divideBy3(i) << endl;
+    }
+    return 0;
     Sudoku sudoku = readSudoku();
     cout << "input:" << endl;
     printSudoku(sudoku);
