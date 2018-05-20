@@ -4,11 +4,6 @@
 #include <vector>
 #include <iostream>
 
-#include <boost/test/data/test_case.hpp>
-#include <boost/test/data/monomorphic.hpp>
-
-namespace bdata = boost::unit_test::data;
-
 // Select the lowest bit, e.g. 11010100 => 00000100
 inline constexpr int selectLowestOneBit(int x) {
   // Proof by example:
@@ -24,8 +19,17 @@ inline constexpr int selectLowestOneBit(int x) {
   return x & (x ^ (x - 1));
 }
 
-BOOST_DATA_TEST_CASE(test_selectLowestOneBit, bdata::make({1, 2, 3, 4, 5, 6, 7, 8, 16, 32}) ^ bdata::make({1,2,1,4,1,2,1,8,16,32}), input, expected) {
-  BOOST_CHECK_EQUAL(selectLowestOneBit(input), expected);
+TEST_CASE("Lowest bit is selected properly", "[selectLowestOneBit]") {
+  REQUIRE( selectLowestOneBit(1) == 1 );
+  REQUIRE( selectLowestOneBit(2) == 2 );
+  REQUIRE( selectLowestOneBit(3) == 1 );
+  REQUIRE( selectLowestOneBit(4) == 4 );
+  REQUIRE( selectLowestOneBit(5) == 1 );
+  REQUIRE( selectLowestOneBit(6) == 2 );
+  REQUIRE( selectLowestOneBit(7) == 1 );
+  REQUIRE( selectLowestOneBit(8) == 8 );
+  REQUIRE( selectLowestOneBit(16) == 16 );
+  REQUIRE( selectLowestOneBit(32) == 32 );
 }
 
 // Rounds x up to the next power of 2.
@@ -36,8 +40,16 @@ constexpr int roundToPowerOfTwo(int x) {
   return result;
 }
 
-BOOST_DATA_TEST_CASE(test_roundToPowerOfTwo, bdata::make({1, 2, 3, 4, 5, 6, 7, 8, 9}) ^ bdata::make({1, 2, 4, 4, 8, 8, 8, 8, 16}), input, expected) {
-  BOOST_CHECK_EQUAL(roundToPowerOfTwo(input), expected);
+TEST_CASE("Rounding to next power of two", "[roundToPowerOfTwo]") {
+  REQUIRE( roundToPowerOfTwo(1) == 1 );
+  REQUIRE( roundToPowerOfTwo(2) == 2 );
+  REQUIRE( roundToPowerOfTwo(3) == 4 );
+  REQUIRE( roundToPowerOfTwo(4) == 4 );
+  REQUIRE( roundToPowerOfTwo(5) == 8 );
+  REQUIRE( roundToPowerOfTwo(6) == 8 );
+  REQUIRE( roundToPowerOfTwo(7) == 8 );
+  REQUIRE( roundToPowerOfTwo(8) == 8 );
+  REQUIRE( roundToPowerOfTwo(9) == 16 );
 }
 
 class Tree1D {
@@ -104,40 +116,42 @@ Tree1D createTree(const std::vector<int> & counts) {
   return tree;
 }
 
-BOOST_AUTO_TEST_CASE(test_update) {
+// TODO port
+
+TEST_CASE("Tests raw data after updating all fields", "[Tree1D.update]") {
   Tree1D tree = createTree({1, 2, 3, 4, 5, 6, 7, 8});
   std::vector<int> expected {1, 3, 3, 10, 5, 11, 7, 36};
   std::vector<int> actual = tree.getRawData();
-  BOOST_TEST(actual == expected);
+  REQUIRE( actual == expected );
 }
 
-BOOST_AUTO_TEST_CASE(test_sumUntil) {
+TEST_CASE("Verifies all the sums from 0 to every position", "[sumUntil]") {
   std::vector<int> data {1, 2, 3, 4, 5, 6, 7, 8};
-    
+
   Tree1D tree = createTree(data);
-  BOOST_CHECK_EQUAL(tree.sumUntil(0), 0);
+  REQUIRE(tree.sumUntil(0) == 0);
   
   int sum = 0;
   int i = 0;
   for (auto count : data) {
     sum += count;
     i++;
-    BOOST_CHECK_EQUAL(tree.sumUntil(i), sum);
+    REQUIRE(tree.sumUntil(i) == sum);
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_sumBetween) {
+TEST_CASE("Tests all the sums from", "[test_sumBetween]") {
   std::vector<int> data {1, 2, 3, 4, 5, 6, 7, 8};
     
   Tree1D tree = createTree(data);
-  BOOST_CHECK_EQUAL(tree.sumUntil(0), 0);
+  REQUIRE(tree.sumUntil(0) == 0);
   for (unsigned int l = 0; l < data.size(); ++l) {
     for (unsigned int r = l; r < data.size(); ++r) {
       int sum = 0;
       for (unsigned int i = l; i <= r; ++i) {
 	sum += data[i];
       }
-      BOOST_CHECK_EQUAL(tree.sumBetween(l,r), sum);
+      REQUIRE(tree.sumBetween(l,r) == sum);
     }
   }
 }

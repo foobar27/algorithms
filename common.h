@@ -1,13 +1,6 @@
 #pragma once
 
-// expected definition arguments from cmake:
-// - PROGRAM_NAME: name of the program/test
-// - either COMPILE_TESTS or COMPILE_MAIN: compile the unit tests or the main()?
-
 // Check arguments
-#ifndef PROGRAM_NAME
-#error PROGRAM_NAME not set!
-#endif
 #ifndef COMPILE_TESTS
 #ifndef COMPILE_MAIN
 #error Either COMPILE_TESTS or COMPILE_MAIN must be set!
@@ -20,12 +13,16 @@
 #endif
 #endif
 
+//
+// Take care that there is only one main()
+//
+
 #ifdef COMPILE_TESTS
 #define MAIN unused_main
+#define CATCH_CONFIG_MAIN
 #else
 #define MAIN main
-#define BOOST_TEST_NO_MAIN
+#define CATCH_CONFIG_DISABLE
 #endif
 
-#define BOOST_TEST_MODULE PROGRAM_NAME
-#include <boost/test/included/unit_test.hpp>
+#include <catch.hpp>
