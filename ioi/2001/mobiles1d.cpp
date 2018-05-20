@@ -20,16 +20,15 @@ inline constexpr int selectLowestOneBit(int x) {
 }
 
 TEST_CASE("Lowest bit is selected properly", "[selectLowestOneBit]") {
-  REQUIRE( selectLowestOneBit(1) == 1 );
-  REQUIRE( selectLowestOneBit(2) == 2 );
-  REQUIRE( selectLowestOneBit(3) == 1 );
-  REQUIRE( selectLowestOneBit(4) == 4 );
-  REQUIRE( selectLowestOneBit(5) == 1 );
-  REQUIRE( selectLowestOneBit(6) == 2 );
-  REQUIRE( selectLowestOneBit(7) == 1 );
-  REQUIRE( selectLowestOneBit(8) == 8 );
-  REQUIRE( selectLowestOneBit(16) == 16 );
-  REQUIRE( selectLowestOneBit(32) == 32 );
+  using namespace std;
+  vector<vector<int>> tests {
+    {1, 1}, {2, 2}, {3, 1}, {4, 4}, {5, 1}, {6, 2}, {7, 1}, {8, 8}, {16, 16}, {32, 32}
+  };
+  for (auto & test: tests) {
+    int input = test[0];
+    int expected = test[1];
+    REQUIRE(selectLowestOneBit(input) == expected);
+  }
 }
 
 // Rounds x up to the next power of 2.
@@ -41,15 +40,15 @@ constexpr int roundToPowerOfTwo(int x) {
 }
 
 TEST_CASE("Rounding to next power of two", "[roundToPowerOfTwo]") {
-  REQUIRE( roundToPowerOfTwo(1) == 1 );
-  REQUIRE( roundToPowerOfTwo(2) == 2 );
-  REQUIRE( roundToPowerOfTwo(3) == 4 );
-  REQUIRE( roundToPowerOfTwo(4) == 4 );
-  REQUIRE( roundToPowerOfTwo(5) == 8 );
-  REQUIRE( roundToPowerOfTwo(6) == 8 );
-  REQUIRE( roundToPowerOfTwo(7) == 8 );
-  REQUIRE( roundToPowerOfTwo(8) == 8 );
-  REQUIRE( roundToPowerOfTwo(9) == 16 );
+  using namespace std;
+  vector<vector<int>> tests {
+    {1, 1}, {2, 2}, {3, 4}, {4, 4}, {5, 8}, {6, 8}, {7, 8}, {8, 8}, {9, 16}
+  };
+  for (auto & test : tests) {
+    int input = test[0];
+    int expected = test[1];
+    REQUIRE(roundToPowerOfTwo(input) == expected);
+  }
 }
 
 class Tree1D {
@@ -78,7 +77,6 @@ public:
     return sum;
   }
 
-  // TODO optimize by not always going to root
   int sumBetween(unsigned int left, unsigned int right) const {
     assert(left < m_data.size());
     assert(right < m_data.size());
@@ -116,46 +114,47 @@ Tree1D createTree(const std::vector<int> & counts) {
   return tree;
 }
 
-// TODO port
-
-TEST_CASE("Tests raw data after updating all fields", "[Tree1D.update]") {
-  Tree1D tree = createTree({1, 2, 3, 4, 5, 6, 7, 8});
-  std::vector<int> expected {1, 3, 3, 10, 5, 11, 7, 36};
-  std::vector<int> actual = tree.getRawData();
-  REQUIRE( actual == expected );
-}
-
-TEST_CASE("Verifies all the sums from 0 to every position", "[sumUntil]") {
-  std::vector<int> data {1, 2, 3, 4, 5, 6, 7, 8};
+TEST_CASE("A tree can be updated and queried", "[Tree1D]") {
+  using namespace std;
+  vector<int> data {1, 2, 3, 4, 5, 6, 7, 8};
 
   Tree1D tree = createTree(data);
-  REQUIRE(tree.sumUntil(0) == 0);
-  
-  int sum = 0;
-  int i = 0;
-  for (auto count : data) {
-    sum += count;
-    i++;
-    REQUIRE(tree.sumUntil(i) == sum);
+
+  SECTION("Verify raw data after updates") {
+    vector<int> expected {1, 3, 3, 10, 5, 11, 7, 36};
+    REQUIRE( tree.getRawData() == expected );
   }
-}
 
-TEST_CASE("Tests all the sums from", "[test_sumBetween]") {
-  std::vector<int> data {1, 2, 3, 4, 5, 6, 7, 8};
-    
-  Tree1D tree = createTree(data);
-  REQUIRE(tree.sumUntil(0) == 0);
-  for (unsigned int l = 0; l < data.size(); ++l) {
-    for (unsigned int r = l; r < data.size(); ++r) {
-      int sum = 0;
-      for (unsigned int i = l; i <= r; ++i) {
-	sum += data[i];
+  SECTION("Verify sums from 0 to every position") {
+    REQUIRE(tree.sumUntil(0) == 0);
+    int sum = 0;
+    int i = 0;
+    for (auto count : data) {
+      SECTION(string("i=") + to_string(i)) {
+	sum += count;
+	i++;
+	REQUIRE(tree.sumUntil(i) == sum);
       }
-      REQUIRE(tree.sumBetween(l,r) == sum);
     }
   }
-}
 
+  SECTION("Verify sums from every pair of positions") {
+    for (unsigned int l = 0; l < data.size(); ++l) {
+      SECTION(string("l=") + to_string(l)) {
+	for (unsigned int r = l; r < data.size(); ++r) {
+	  SECTION(string("r=") + to_string(r)) {
+	    int sum = 0;
+	    for (unsigned int i = l; i <= r; ++i) {
+	      sum += data[i];
+	    }
+	    REQUIRE(tree.sumBetween(l,r) == sum);
+	  }
+	}
+      }
+    }
+  }
+
+}
 
 int MAIN() {
   using namespace std;
