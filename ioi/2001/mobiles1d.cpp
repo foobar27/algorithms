@@ -115,12 +115,61 @@ BOOST_AUTO_TEST_CASE(test_sumUntil) {
   std::vector<int> data {1, 2, 3, 4, 5, 6, 7, 8};
     
   Tree1D tree = createTree(data);
-  std::vector<int> expected {1, 3, 3, 10, 5, 11, 7, 36};
-  std::vector<int> actual = tree.getRawData();
-  BOOST_TEST(actual == expected);
+  BOOST_CHECK_EQUAL(tree.sumUntil(0), 0);
+  
+  int sum = 0;
+  int i = 0;
+  for (auto count : data) {
+    sum += count;
+    i++;
+    BOOST_CHECK_EQUAL(tree.sumUntil(i), sum);
+  }
 }
 
+BOOST_AUTO_TEST_CASE(test_sumBetween) {
+  std::vector<int> data {1, 2, 3, 4, 5, 6, 7, 8};
+    
+  Tree1D tree = createTree(data);
+  BOOST_CHECK_EQUAL(tree.sumUntil(0), 0);
+  for (unsigned int l = 0; l < data.size(); ++l) {
+    for (unsigned int r = l; r < data.size(); ++r) {
+      int sum = 0;
+      for (unsigned int i = l; i <= r; ++i) {
+	sum += data[i];
+      }
+      BOOST_CHECK_EQUAL(tree.sumBetween(l,r), sum);
+    }
+  }
+}
+
+
 int MAIN() {
-  // TODO implement
+  using namespace std;
+  int op, s;
+  cin >> op;
+  assert(op == 0);
+  cin >> s;
+  Tree1D tree(s);
+  while (true) {
+    cin >> op;
+    switch (op) {
+    case 1:
+      {
+	int x, a;
+	cin >> x >> a;
+	tree.update(x, a);
+	break;
+      }
+    case 2:
+      {
+	int l, r;
+	cin >> l >> r;
+	cout << tree.sumBetween(l, r) << endl << flush;
+	break;
+      }
+    case 3:
+      exit(0);
+    }
+  }
   return 0;
 }
